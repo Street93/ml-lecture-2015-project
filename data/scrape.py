@@ -4,7 +4,6 @@ from lxml import html
 import requests
 from collections import namedtuple
 from itertools import chain
-from multiprocessing.pool import ThreadPool
 from time import sleep
 from sys import stderr
 
@@ -170,29 +169,37 @@ def make_retrying(fun, exception_class=None, max_retries=1, wait_duration=None):
     return newfunc
             
 
-def save_years_issues(year):
-    with ThreadPool(processes=10) as pool:
-        mapfun = map # pool.map
+def save_issue(issue):
+    (year, week) = issue
 
-        for week in range(1, 53):
-            try:
-                def load():
-                    issue = (year, week)
-                    return load_issue_paragraphs(issue, mapfun)
+    def load():
+        return load_issue_paragraphs(issue)
 
-                retrying_load = \
-                    make_retrying( load \
-                                 , exception_class=requests.exceptions.ConnectionError \
-                                 , max_retries=1 \
-                                 , wait_duration=180) 
+    retrying_load = \
+        make_retrying( load \
+                     , exception_class=requests.exceptions.ConnectionError \
+                     , max_retries=1 \
+                     , wait_duration=180) 
 
-                paragraphs = retrying_load()
+    paragraphs = retrying_load()
 
-                with open('spiegel-{}-{:02}'.format(year, week), 'w') as f:
-                    for paragraph in paragraphs:
-                        print(paragraph, file=f)
-            except IssueDoesNotExist:
-                pass
-            except requests.exceptions.ConnectionError as exc:
-                print('Failed to download issue {}-{:02}'.format(year, week), file=stderr)
-                print(exc, file=stderr)
+    with open('spiegel-{}-{:02}'.format(year, week), 'w') as f:
+        for paragraph in paragraphs:
+            print(paragraph, file=f)
+    
+
+def main():
+    issues = (SpiegelIssue(year, week) for year in range(1990, 2010)
+                                       for week in range(1, 53))
+    for issue in issues:
+        try:
+            save_issue(issue)
+        except IssueDoesNotExist:
+            pass
+        except requests.exceptions.ConnectionError as exc:
+            print('Failed to download issue {}-{:02}'.format(year, week), file=stderr)
+            print(exc, file=stderr)
+
+
+if __name__ == '__main__':
+    main()
