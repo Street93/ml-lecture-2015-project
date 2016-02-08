@@ -65,6 +65,7 @@ def good_paragraph(paragraph):
     return all((predicate(paragraph) for predicate in predicates))
 
 def merge_and_filter_paragraphs(paragraphs):
+    paragraphs = list(paragraphs)
     result = []
 
     i = 0

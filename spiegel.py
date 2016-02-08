@@ -75,22 +75,5 @@ def iter_issues_articles(issues=None, data_path='data/spiegel'):
                 yield Path(data_path) / (str(issue) + '.tar.gz')
     
     for issue_path in iter_paths():
-        for article in iter_articles(issue_path):
+        for article in iter_articles(str(issue_path)):
             yield article
-
-
-def main():
-    issues = (SpiegelIssue(year, week) for year in range(1990, 2010)
-                                       for week in range(1, 53))
-    for issue in issues:
-        try:
-            load_raw_articles(issue)
-        except IssueDoesNotExist:
-            pass
-        except requests.exceptions.ConnectionError as exc:
-            print('Failed to download issue {}-{:02}'.format(year, week), file=stderr)
-            print(exc, file=stderr)
-
-
-if __name__ == '__main__':
-    main()

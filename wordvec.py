@@ -20,7 +20,7 @@ def create_word_embedding(texts, outfile_name):
                        , '-output', outfile_name ])
     finally:
         tmpf.close()
-        # os.remove(tmpf.name)
+        os.remove(tmpf.name)
 
 class WordEmbedding:
     def __init__(self, file_name):
