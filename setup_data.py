@@ -25,6 +25,8 @@ def download_spiegel(first_issue=SpiegelIssue(1990, 1)):
             retrying_load()
         except IssueDoesNotExist:
             pass
+        except FileExistsError:
+            pass
         except requests.exceptions.ConnectionError as exc:
             print('Failed to download issue {}-{:02}'.format(year, week), file=stderr)
             print(exc, file=stderr)

@@ -9,6 +9,7 @@ from sys import stderr
 from pathlib import Path
 import tarfile
 from io import BytesIO
+import os
 
 class SpiegelIssue(namedtuple('SpiegelIssue', 'year week')):
     def __str__(self):
@@ -37,7 +38,9 @@ def load_raw_articles(issue, topath='.'):
     article_urls = load_index(issue)
 
     archive_path = Path(topath) / (str(issue) + '.tar.gz')
-    with tarfile.open(str(archive_path), mode='x:gz') as tar:
+    tar = tarfile.open(str(archive_path), mode='x:gz')
+    # with tarfile.open(str(archive_path), mode='x:gz') as tar:
+    try:
         for url in article_urls:
             response = requests.get(url)
             if response.ok:
@@ -45,6 +48,13 @@ def load_raw_articles(issue, topath='.'):
                 tarinfo = tarfile.TarInfo(file_name)
                 tarinfo.size = len(response.content)
                 tar.addfile(tarinfo, BytesIO(response.content))
+    except:
+        tar.close()
+        os.remove(str(archive_path))
+        raise
+    else:
+        tar.close()
+
 
 def scrape_paragraphs(page_source_bytes):
     doc = html.fromstring(page_source_bytes)
