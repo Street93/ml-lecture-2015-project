@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# setup word2vec
+mkdir -p tools
+cd tools
+svn checkout http://word2vec.googlecode.com/svn/trunk/
+mv trunk/* .
+rm -rf trunk # this will delete the svn repo
+make

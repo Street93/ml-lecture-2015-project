@@ -13,12 +13,16 @@ Make sure you have installed
 * pip
 * virtualenv
 * a fortran compiler (e.g. gcc-fortran).
+* svn
+* basic unix build utilities like make and a c compiler
 
 Open a terminal in the project root directory and run
 ```shell
 virtualenv env
 source env/bin/activate
 pip install $(cat requirements.txt)
+./setup-tools
 ```
 
 To download and setup basic data, run `./setup_data.py`.
+The download may take *very* long (multiple days).
