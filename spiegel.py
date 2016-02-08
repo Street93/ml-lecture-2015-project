@@ -35,12 +35,11 @@ def load_index(spiegel_issue):
     return links
 
 def load_raw_articles(issue, topath='.'):
-    article_urls = load_index(issue)
-
     archive_path = Path(topath) / (str(issue) + '.tar.gz')
     tar = tarfile.open(str(archive_path), mode='x:gz')
-    # with tarfile.open(str(archive_path), mode='x:gz') as tar:
     try:
+        article_urls = load_index(issue)
+
         for url in article_urls:
             response = requests.get(url)
             if response.ok:
