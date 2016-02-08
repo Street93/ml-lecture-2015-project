@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
+import spiegel
 from spiegel import load_raw_articles, SpiegelIssue, IssueDoesNotExist
-from utils import retrying
+from sanitize import sanitize_article
+from utils import retrying, concat
+
+from wordvec import create_word_embedding
 from os import makedirs
 import requests
 
@@ -25,8 +29,13 @@ def download_spiegel(first_issue=SpiegelIssue(1990, 1)):
             print('Failed to download issue {}-{:02}'.format(year, week), file=stderr)
             print(exc, file=stderr)
 
+def create_default_embedding():
+    spiegel_articles = map(sanitize_article, spiegel.iter_issues_articles())
+    create_word_embedding(concat(spiegel_articles), 'data/word-embedding')
+
 def main():
     download_spiegel()
+    create_default_embedding()
 
 if __name__ == '__main__':
     main()
