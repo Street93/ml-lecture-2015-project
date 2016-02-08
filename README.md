@@ -21,4 +21,4 @@ source env/bin/activate
 pip install $(cat requirements.txt)
 ```
 
-To download all SPIEGEL issues since 1990, run `python scrape.py`.
+To download and setup basic data, run `./setup_data.py`.

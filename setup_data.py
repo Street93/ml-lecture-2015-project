@@ -5,7 +5,7 @@ from utils import retrying
 from os import makedirs
 import requests
 
-def scrape_spiegel(first_issue=SpiegelIssue(1990, 1)):
+def download_spiegel(first_issue=SpiegelIssue(1990, 1)):
     makedirs('data/spiegel', exist_ok=True)
     issues = (SpiegelIssue(year, week) for year in range(first_issue.year, 2010) \
                                        for week in range(first_issue.week, 53))
@@ -26,7 +26,7 @@ def scrape_spiegel(first_issue=SpiegelIssue(1990, 1)):
             print(exc, file=stderr)
 
 def main():
-    scrape_spiegel()
+    download_spiegel()
 
 if __name__ == '__main__':
     main()
