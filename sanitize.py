@@ -90,12 +90,15 @@ def merge_and_filter_paragraphs(paragraphs):
 
     return result
 
-def fix_whitespace(paragraph):
+def adjust_whitespace(paragraph):
     paragraph = paragraph.replace('\n', ' ')
+    chars_with_padding = '.!?:,;"()'
+    for c in chars_with_padding:
+        paragraph = paragraph.replace(c, ' {} '.format(c))
 
     words = paragraph.split(' ')
-    return ' '.join(filter(lambda str: str, words))
+    return ' '.join(filter(lambda str: str != '', words))
 
 def sanitize_article(article_paragraphs):
-    fixed_paragraphs = [fix_whitespace(paragraph) for paragraph in article_paragraphs]
+    fixed_paragraphs = [adjust_whitespace(paragraph) for paragraph in article_paragraphs]
     return merge_and_filter_paragraphs(fixed_paragraphs)
