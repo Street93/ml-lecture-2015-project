@@ -10,7 +10,6 @@ from pathlib import Path
 import tarfile
 from io import BytesIO
 
-SpiegelIssue = namedtuple('SpiegelIssue', 'year week')
 class SpiegelIssue(namedtuple('SpiegelIssue', 'year week')):
     def __str__(self):
         return 'spiegel-{}-{:02}'.format(self.year, self.week)
