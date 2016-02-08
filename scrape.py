@@ -1,4 +1,6 @@
-from spiegel import load_raw_articles, SpiegelIssue
+#!/usr/bin/env python3
+
+from spiegel import load_raw_articles, SpiegelIssue, IssueDoesNotExist
 from utils import retrying
 import requests
 
