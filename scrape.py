@@ -2,9 +2,11 @@
 
 from spiegel import load_raw_articles, SpiegelIssue, IssueDoesNotExist
 from utils import retrying
+from os import makedirs
 import requests
 
 def scrape_spiegel(first_issue):
+    makedirs('data/spiegel', exist_ok=True)
     issues = (SpiegelIssue(year, week) for year in range(first_issue.year, 2010) \
                                        for week in range(first_issue.week, 53))
 
