@@ -20,3 +20,5 @@ virtualenv env
 source env/bin/activate
 pip install $(cat requirements.txt)
 ```
+
+To download all SPIEGEL issues since 1990, run `python scrape.py`.
