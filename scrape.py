@@ -2,12 +2,6 @@ from spiegel import load_raw_articles, SpiegelIssue
 from utils import retrying
 import requests
 
-
-@retrying(requests.exceptions.ConnectionError)
-def asdf():
-    pass
-    
-
 def scrape_spiegel(first_issue):
     issues = (SpiegelIssue(year, week) for year in range(first_issue.year, 2010) \
                                        for week in range(first_issue.week, 53))
@@ -26,3 +20,9 @@ def scrape_spiegel(first_issue):
         except requests.exceptions.ConnectionError as exc:
             print('Failed to download issue {}-{:02}'.format(year, week), file=stderr)
             print(exc, file=stderr)
+
+def main():
+    scrape_spiegel(SpiegelIssue(1990, 1))
+
+if __name__ == '__main__':
+    main()
