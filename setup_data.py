@@ -3,7 +3,7 @@
 import spiegel
 from spiegel import load_raw_articles, SpiegelIssue, IssueDoesNotExist
 from sanitize import sanitize_article
-from utils import retrying, concat
+from utils import retrying
 
 from wordvec import create_word_embedding
 from os import makedirs

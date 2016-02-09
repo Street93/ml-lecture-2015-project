@@ -2,11 +2,6 @@ from time import sleep
 from copy import copy
 
 
-def concat(iterable):
-    for sub_generator in iterable:
-        for value in sub_generator:
-            yield value
-
 def lines_iter(f):
     for line in f:
         yield line
