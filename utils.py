@@ -1,10 +1,15 @@
 from time import sleep
+from copy import copy
 
 
-def concat(generator):
-    for sub_generator in generator:
+def concat(iterable):
+    for sub_generator in iterable:
         for value in sub_generator:
             yield value
+
+def lines_iter(f):
+    for line in f:
+        yield line
 
 def retrying(exception_class, retries=1, retry_delay=None):
     def wrap(func):
@@ -24,3 +29,18 @@ def retrying(exception_class, retries=1, retry_delay=None):
         return newfunc
 
     return wrap
+
+def subsequences(iterable, length):
+    iterator = iter(iterable)
+    current_subseq = []
+    try:
+        for i in range(0, length):
+            current_subseq.append(next(iterator))
+    except StopIteration:
+        return
+
+    for item in iterator:
+        current_subseq.pop(0)
+        current_subseq.append(item)
+
+        yield copy(current_subseq)
