@@ -3,25 +3,10 @@ import os
 from tempfile import NamedTemporaryFile
 import subprocess
 
-# def prepare_for_word2vec(string):
-#     chars_with_padding = '.!?:,;"()'
-#     for c in chars_with_padding:
-#         string = string.replace(c, ' {} '.format(c))
-#     return string
-
-def create_word_embedding(texts, outfile_name):
-    tmpf = NamedTemporaryFile(mode='w', delete=False)
-    try:
-        for text in texts:
-            # print(prepare_for_word2vec(text), file=tmpf)
-            print(text, file=tmpf)
-        tmpf.close()
-        subprocess.run([ 'tools/word2vec/word2vec'
-                       , '-train', tmpf.name
-                       , '-output', outfile_name ])
-    finally:
-        tmpf.close()
-        os.remove(tmpf.name)
+def create_word_embedding(infile_name, outfile_name):
+    subprocess.run([ 'tools/word2vec/word2vec'
+                   , '-train', infile_name
+                   , '-output', outfile_name ])
 
 class WordEmbedding:
     def __init__(self, file_name):

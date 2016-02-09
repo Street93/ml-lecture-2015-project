@@ -31,12 +31,20 @@ def download_spiegel(first_issue=SpiegelIssue(1990, 1)):
             print('Failed to download issue {}-{:02}'.format(year, week), file=stderr)
             print(exc, file=stderr)
 
+def create_default_corpus():
+    with open('data/text-corpus', mode='w') as f:
+        articles = map(sanitize_article, spiegel.iter_issues_articles())
+        for article in articles:
+            for paragraph in article:
+                print(paragraph, file=f)
+
 def create_default_embedding():
-    spiegel_articles = map(sanitize_article, spiegel.iter_issues_articles())
-    create_word_embedding(concat(spiegel_articles), 'data/word-embedding')
+    # spiegel_articles = map(sanitize_article, spiegel.iter_issues_articles())
+    create_word_embedding('data/text-corpus', 'data/word-embedding')
 
 def main():
     download_spiegel()
+    create_default_corpus()
     create_default_embedding()
 
 if __name__ == '__main__':
