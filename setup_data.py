@@ -9,7 +9,7 @@ from wordvec import create_word_embedding
 from os import makedirs
 import requests
 
-def download_spiegel(first_issue=SpiegelIssue(1990, 1)):
+def download_spiegel(first_issue=SpiegelIssue(1970, 1)):
     makedirs('data/spiegel', exist_ok=True)
     issues = (SpiegelIssue(year, week) for year in range(first_issue.year, 2010) \
                                        for week in range(first_issue.week, 53))
