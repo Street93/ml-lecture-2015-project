@@ -1,10 +1,10 @@
-#!/usr/bin/env python3
+# /usr/bin/env python3
 
 import spiegel
 from spiegel import load_raw_articles, SpiegelIssue, IssueDoesNotExist
 from sanitize import sanitize_article
 from utils import retrying
-from wordvec import create_word_embedding
+from wordvec import create_word_embedding, WordEmbedding
 from ngram import random_corpus_ngrams
 
 from numpy import random
@@ -46,14 +46,28 @@ def create_embedding():
 
 def create_ngrams():
     random.seed(4)
+    embedding = WordEmbedding('data/word-embedding')
+    def valid_ngram(ngram):
+        def known_word(word):
+            try:
+                embedding[word]
+                return True
+            except:
+                return False
+        return all(map(known_word, ngram))
+
     for N in [4, 5, 10, 11, 20, 21]:
-        grams = random_corpus_ngrams('data/text-corpus', N, number=1000000)
+        ngrams = random_corpus_ngrams( 'data/text-corpus' \
+                                    , N \
+                                    , number=1000000 \
+                                    , predicate=valid_ngram )
+
         with open('data/{}-gram-train'.format(N), mode='w') as f:
-            for gram in islice(grams, 900000):
-                print(' '.join(gram), file=f)
+            for ngram in islice(ngrams, 900000):
+                print(' '.join(ngram), file=f)
         with open('data/{}-gram-test'.format(N), mode='w') as f:
-            for gram in grams:
-                print(' '.join(gram), file=f)
+            for ngram in ngrams:
+                print(' '.join(ngram), file=f)
 
 def main():
     download_spiegel()
