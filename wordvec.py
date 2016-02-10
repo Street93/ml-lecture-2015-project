@@ -5,9 +5,9 @@ import subprocess
 
 def create_word_embedding(infile, outfile, min_count=5):
     subprocess.run([ 'tools/word2vec/word2vec'
-                   , '-min-count', min_count
-                   , '-train', infile_name
-                   , '-output', outfile_name ])
+                   , '-min-count', str(min_count)
+                   , '-train', infile
+                   , '-output', outfile ])
 
 class WordEmbedding:
     def __init__(self, file_name):
@@ -67,3 +67,5 @@ class WordEmbedding:
         for i in np.argsort(distances):
             yield self.wordOfIndex(i)
 
+def ngram_to_vec(ngram, embedding):
+    return list(chain.from_iterable(map(embedding.__getitem__, ngram)))
