@@ -43,11 +43,9 @@ def split_at(string, predicate):
 def no_short_sentences(paragraph):
     sentence_end_chars = ['.', '!', '?', ':']
     sentences = list(split_at(paragraph, lambda c: c in sentence_end_chars))[ : -1]
-    # print(sentences)
 
     for sentence in sentences:
         words = sentence.split()
-        # print(words)
         if len(words) < 2:
             return False
 
