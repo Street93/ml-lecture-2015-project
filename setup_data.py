@@ -4,10 +4,13 @@ import spiegel
 from spiegel import load_raw_articles, SpiegelIssue, IssueDoesNotExist
 from sanitize import sanitize_article
 from utils import retrying
-
 from wordvec import create_word_embedding
+from ngram import random_corpus_ngrams
+
+from numpy import random
 from os import makedirs
 import requests
+from itertools import islice
 
 def download_spiegel(first_issue=SpiegelIssue(1970, 1)):
     makedirs('data/spiegel', exist_ok=True)
@@ -31,21 +34,32 @@ def download_spiegel(first_issue=SpiegelIssue(1970, 1)):
             print('Failed to download issue {}-{:02}'.format(year, week), file=stderr)
             print(exc, file=stderr)
 
-def create_default_corpus():
+def create_corpus():
     with open('data/text-corpus', mode='w') as f:
         articles = map(sanitize_article, spiegel.iter_issues_articles())
         for article in articles:
             for paragraph in article:
                 print(paragraph, file=f)
 
-def create_default_embedding():
-    # spiegel_articles = map(sanitize_article, spiegel.iter_issues_articles())
+def create_embedding():
     create_word_embedding('data/text-corpus', 'data/word-embedding')
+
+def create_ngrams():
+    random.seed(4)
+    for N in [4, 5, 10, 11, 20, 21]:
+        grams = random_corpus_ngrams('data/text-corpus', N, number=1000000)
+        with open('data/{}-gram-train'.format(N), mode='w') as f:
+            for gram in islice(grams, 900000):
+                print(' '.join(gram), file=f)
+        with open('data/{}-gram-test'.format(N), mode='w') as f:
+            for gram in grams:
+                print(' '.join(gram), file=f)
 
 def main():
     download_spiegel()
-    create_default_corpus()
-    create_default_embedding()
+    create_corpus()
+    create_embedding()
+    create_ngrams()
 
 if __name__ == '__main__':
     main()

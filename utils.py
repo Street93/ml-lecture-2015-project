@@ -1,10 +1,12 @@
 from time import sleep
-from copy import copy
 
 
 def lines_iter(f):
     for line in f:
         yield line
+
+def iterlen(iterator):
+    return sum(1 for _ in iterator)
 
 def retrying(exception_class, retries=1, retry_delay=None):
     def wrap(func):
@@ -34,8 +36,10 @@ def subsequences(iterable, length):
     except StopIteration:
         return
 
+    yield iter(current_subseq)
+
     for item in iterator:
         current_subseq.pop(0)
         current_subseq.append(item)
 
-        yield copy(current_subseq)
+        yield iter(current_subseq)
