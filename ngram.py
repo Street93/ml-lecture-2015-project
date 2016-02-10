@@ -25,7 +25,5 @@ def random_corpus_ngrams(corpus_path, N, number, predicate=None):
         flags = fromiter(chain(includes, excludes), dtype=bool)
         random.shuffle(flags)
 
-        ngrams = iter_ngrams()
-        for include, ngram in zip(flags, ngrams):
-            if include:
-                yield ngram
+        ngrams = [list(ngram) for (include, ngram) in zip(flags, iter_ngrams()) if include]
+        return ngrams
