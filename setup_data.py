@@ -1,4 +1,4 @@
-# /usr/bin/env python3
+#!/usr/bin/env python3
 
 import spiegel
 from spiegel import load_raw_articles, SpiegelIssue, IssueDoesNotExist
