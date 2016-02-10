@@ -53,6 +53,8 @@ Algorithms we may use for this:
   I don't see why this should work very well, but let's try.
 * Least squares  
   Seems to be robust for many scenarios.
+* Density trees  
+  A nonparametric approach will probably work well with word embeddings.
 * Try to fit some other geometry
   Can we fit some other shapes on our data?
   Spheres? Polyedra? 
