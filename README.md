@@ -23,6 +23,7 @@ source env/bin/activate
 pip install $(cat requirements.txt)
 ./setup-tools
 ```
+If you want to use matplotlib, make sure you have installed matplotlib system wide (e.g. `pacman -S python-matplotlib` if you're on arch linux) and replace `virtualenv env` by `virtualenv --system-site-packages env`.
 
 To download and setup basic data, run `./setup_data.py`.
 The download may take *very* long (multiple days).
