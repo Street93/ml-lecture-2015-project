@@ -1,4 +1,5 @@
 from time import sleep
+from numpy import ndarray, array, float32, float64
 
 
 def lines_iter(f):
@@ -26,6 +27,13 @@ def retrying(exception_class, retries=1, retry_delay=None):
         return newfunc
 
     return wrap
+
+def to_ndarray(it, dtype=float32):
+    if type(it) in [float, int, bool, ndarray, float32, float64]:
+        return it
+
+    return array([to_ndarray(subgen) for subgen in it], dtype=dtype)
+    
 
 def subsequences(iterable, length):
     iterator = iter(iterable)
