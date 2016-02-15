@@ -51,3 +51,7 @@ def subsequences(iterable, length):
         current_subseq.append(item)
 
         yield iter(current_subseq)
+
+class Struct:
+    def __init__(self, **entries): 
+        self.__dict__.update(entries)
