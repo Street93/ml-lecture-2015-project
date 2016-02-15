@@ -3,10 +3,11 @@ import os
 from tempfile import NamedTemporaryFile
 import subprocess
 
-def create_word_embedding(infile, outfile, min_count=5):
-    subprocess.run([ 'tools/word2vec/word2vec'
-                   , '-min-count', str(min_count)
-                   , '-train', infile
+def create_word_embedding(infile, outfile, min_count=5, size=100):
+    subprocess.run([ 'tools/word2vec/word2vec' \
+                   , '-min-count', str(min_count) \
+                   , '-train', infile \
+                   , '-size', str(size) \
                    , '-output', outfile ])
 
 class WordEmbedding:
