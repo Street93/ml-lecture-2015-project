@@ -55,3 +55,22 @@ def subsequences(iterable, length):
 class Struct:
     def __init__(self, **entries): 
         self.__dict__.update(entries)
+
+def genarr_first(genarr):
+    def newarr(gen):
+        current_snd = None
+        def set_and_discard_snd(tup):
+            nonlocal current_snd
+            current_snd = tup[1]
+            return tup[0]
+        
+        gen = map(set_and_discard_snd, gen)
+
+        for transformed_fst in genarr(gen):
+            yield (transformed_fst, current_snd) 
+
+    return newarr
+
+def duplicate_gen(gen):
+    for x in gen:
+        yield (x, x)
