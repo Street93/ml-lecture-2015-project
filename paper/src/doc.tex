@@ -1,0 +1,59 @@
+\documentclass{amsart}
+
+% packages
+\usepackage[utf8]{inputenc}
+\usepackage{mathtools}
+\usepackage{mathabx}
+\usepackage[ngerman]{babel}
+% \usepackage{paralist}
+% \usepackage{extarrows}
+% \usepackage{dsfont}
+% \usepackage{amsthm}
+
+% bibliography
+\usepackage[backend=biber]{biblatex}
+\DeclareFieldFormat{postnote}{#1}
+\addbibresource{bibliography.bib}
+
+% page layout
+\usepackage{geometry}
+\geometry{verbose,a4paper,tmargin=3.5cm,bmargin=2.5cm,lmargin=2.6cm,rmargin=2.6cm}
+
+
+% theorem styles
+\theoremstyle{plain}
+\newtheorem{proposition}[subsection]{Satz}
+\newtheorem{corollary}[subsection]{Korollar}
+\newtheorem{lemma}[subsection]{Lemma}
+
+\theoremstyle{definition}
+\newtheorem{definition}[subsection]{Definition}
+\newtheorem{definition-proposition}[subsection]{Definition/Satz}
+\newtheorem{remark}[subsection]{Bemerkung}
+%\newtheorem*{notation}{Notation}
+
+
+% custom environments
+% \newenvironment{enumeratei}
+% 	{\begin{compactenum}[(i)]}
+% 	{\end{compactenum}}
+% \newenvironment{enumerateprops}
+% 	%{\begin{compactenum}[(i)] \setlength\itemsep{1em}}
+% 	{\begin{compactenum}[(i)]}
+% 	{\end{compactenum}}
+
+
+
+\begin{document}
+
+\title{Punctuation Reconstruction using Word Embeddings}
+\author{Martin Bidlingmaier}
+\date{17.02.2016}
+\maketitle
+
+\section{Abstract}
+
+\printbibliography
+
+\end{document}
+
