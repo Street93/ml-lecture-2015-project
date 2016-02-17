@@ -3,6 +3,8 @@ from utils import iterlen, lines_iter, subsequences
 from itertools import chain, repeat
 from numpy import random, fromiter
 
+def create_
+
 def random_corpus_ngrams(corpus_path, N, number, predicate=None):
     with open(corpus_path) as corpus:
         def iter_ngrams():
@@ -25,5 +27,6 @@ def random_corpus_ngrams(corpus_path, N, number, predicate=None):
         flags = fromiter(chain(includes, excludes), dtype=bool)
         random.shuffle(flags)
 
-        ngrams = [list(ngram) for (include, ngram) in zip(flags, iter_ngrams()) if include]
+        ngrams = array([list(ngram) for (include, ngram) in zip(flags, iter_ngrams()) if include])
+        random.shuffle(ngrams)
         return ngrams
