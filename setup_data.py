@@ -59,11 +59,11 @@ def create_ngrams():
     for N in [4, 5, 10, 11, 20, 21]:
         ngrams = random_corpus_ngrams( 'data/text-corpus' \
                                     , N \
-                                    , number=1000000 \
+                                    , number=50000 \
                                     , predicate=valid_ngram )
 
         with open('data/{}-gram-train'.format(N), mode='w') as f:
-            for ngram in islice(ngrams, 900000):
+            for ngram in islice(ngrams, 40000):
                 print(' '.join(ngram), file=f)
         with open('data/{}-gram-test'.format(N), mode='w') as f:
             for ngram in ngrams:
