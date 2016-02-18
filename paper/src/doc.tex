@@ -4,7 +4,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{mathtools}
 \usepackage{mathabx}
-\usepackage[ngerman]{babel}
+% \usepackage[ngerman]{babel}
 % \usepackage{paralist}
 % \usepackage{extarrows}
 % \usepackage{dsfont}
@@ -22,27 +22,19 @@
 
 % theorem styles
 \theoremstyle{plain}
-\newtheorem{proposition}[subsection]{Satz}
-\newtheorem{corollary}[subsection]{Korollar}
+\newtheorem{proposition}[subsection]{Proposition}
+\newtheorem{corollary}[subsection]{Corollary}
 \newtheorem{lemma}[subsection]{Lemma}
 
 \theoremstyle{definition}
 \newtheorem{definition}[subsection]{Definition}
-\newtheorem{definition-proposition}[subsection]{Definition/Satz}
-\newtheorem{remark}[subsection]{Bemerkung}
-%\newtheorem*{notation}{Notation}
+\newtheorem{remark}[subsection]{Remark}
 
-
-% custom environments
-% \newenvironment{enumeratei}
-% 	{\begin{compactenum}[(i)]}
-% 	{\end{compactenum}}
-% \newenvironment{enumerateprops}
-% 	%{\begin{compactenum}[(i)] \setlength\itemsep{1em}}
-% 	{\begin{compactenum}[(i)]}
-% 	{\end{compactenum}}
-
-
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\renewcommand{\P}{\mathbb{P}}
+\newcommand{\bigo}{\mathds{O}}
+\DeclareMathOperator*{\argmin}{arg\,min}
 
 \begin{document}
 
@@ -52,7 +44,88 @@
 \maketitle
 
 \section{Abstract}
+  Some Abstract.
 
+\section{Introduction}
+  Some Introduction.
+
+\section{Skip-gram Model and Distributional Hypothesis}
+  Many natural language proccesing (NLP) tasks require a so called \emph{word embedding}, as does ours.
+  In this section, we give a brief introduction to the theory of word embeddings and outline the state-of-the-art \emph{word2vec} algorithm for creating them.
+
+  Let us first fix some notation used throughout this section.
+  Let $W$ be a finite set.
+  We interpret the set $W$ as set of all words and punctuation marks that occur in text data we examine.
+  Let $T$ be a list composed of elements of $W$, which we interpret as a corpus of correct text, to be used for creating a word embedding.
+  For each word $w \in T$, let $c_w$ be a list of \emph{context} words of $w$.
+  We expect the $c_w$ to be words that are in close proximity to $w$ in some sense, so that $c_w$ contains information related to $w$.
+  Let $C = \{c_w \mid w \in w\}$ be the set of all contexts.
+  A typical choice is the skipgram
+  \begin{equation*}
+    c_w = (w_{-k}, \dots, w_{-1}, w_1, \dots, w_k)
+  \end{equation*}
+  where $(w_{-k}, \dots, w_0 = w, \dots w_k) \subseteq T$ is the sublist of size $2 k + 1$ of $T$ containing $w$ as its middle element, for some $k \in \N$.
+  
+  A word embedding is mapping $v : W \rightarrow \R^d$ for some $d \in \N$.
+  We want $v$ to map similar words to close vectors.
+  For example, we expect the distance $v(\text{``häufig''})$ -- $v(\text{``oft''})$ to be small, while $v(\text{``Hund''})$ and $v(\text{``Mathematik''})$ should be far away.
+  It was discovered that word embeddings can even encode more subtle relationships in simple arithmetical properties.
+  XY et al discovered that their word embedding encodes gender difference as vector difference of word embeddings, so
+  \begin{equation*}
+    v(\text{``king''}) - v(\text{``queen''}) \approx v(\text{``uncle''}) - v(\text{``aunt''}).
+  \end{equation*}
+  The property that embeddings of similar words are to close is essential for our task.
+  We can not hope to learn all possible contexts a punctuation mark can occure, so we need to extrapolate from contexts in the training data to cases in test data.
+
+  The informal distributional hypothesis states that similar words occure in similar contexts XY.
+  If the hypothesis is true, we should expect to get good word embeddings if we minimize the distance of words that occure in the same context while maximizing it when they don't.
+  One way to construct word embeddings is the \emph{skipgram model}:
+
+  Let $(p_\theta)_{\theta \in \Theta}$ be a family of probability measures on $W \times C$.
+  The parameter $\theta$ will typically contain at least the values of $v$ for every word $w \in W$.
+  The maximum likelihood estimator for $\theta$ based on the observation $T$ has the form
+  \begin{equation*}
+    \hat{\theta} = \argmin_{\theta} \prod_{w \in T} p_\theta(w, c_w),
+  \end{equation*}
+  assuming independence of word -- context pairs occuring in the text.
+
+  A widely used choice of $p_\theta$ is the normalized softmax function:
+  \begin{equation*}
+    \label{eq:def-Theta}
+    \Theta = \{v(w), v(c_w) \mid w \in W, v(w) \in \R^d, v(c_w) \in \R^d\}
+  \end{equation*}
+  \begin{equation}
+    \label{eq:softmax-p}
+    p_\theta(w, c) = \frac{\exp(v(w)^t v(c))}{\sum_{c' \in C} \exp(v(w)^t v(c'))}
+  \end{equation}
+  Note that $\hat\theta$ will not only contain embeddings for every word $w$ but also for every context $c \in C$.
+  $\hat\theta$ is the maximizer of
+  \begin{equation}
+    \label{eq:hat-theta}
+    \sum_{w \in W} \left( v(w)^t v(c_w) - \log \left(\sum_{c \in C} \exp(v(w)^t v(c))\right) \right).
+  \end{equation}
+  Heuristically, maximizing \ref{eq:hat-theta} is in line with our goal of mapping similar words (that occure in similar contexts according to the distributional hypothesis) on similar values:
+  \ref{eq:hat-theta} is maximized if $v(w)^t v(c_w)$, a value related to the cosine distance of the two vectors, is big and penalized by the corresponding term for arbitrary other contexts $c$.
+
+  Evaluating $p_\theta$ in this form is obviously very expensive, with an asymptotic time complexity of $\mathcal{O}(|T|)$.
+  It has been suggested to remedy this situation by calculating the denominator in \ref{eq:softmax-p} with a huffman tree built from the occurence statistic of $W$ in $T$, reducing the computational cost to $\mathcal{O}(\log(|T|))$.
+
+  We don't discuss this approach further and instead describe the computationally less complex variant \emph{word2vec}, proposed by Mikolov et al. in \cite{DBLP:journals/corr/MikolovSCCD13}.
+  
+  \section{Word2vec}
+  The \emph{word2vec} algorithm is based on estimating the distrubtion of the random Variable $D : W \times C \rightarrow \{0, 1\}$, defined by
+  \begin{equation*}
+    D(w, c) = \begin{cases}
+      1 & \text{if $w$ occures in $T$ with context $c$} \\
+      0 & \text{otherwise}.
+      \end{cases}
+  \end{equation*}
+  We model $D(w, c)$ as a softmax-distruted binary variable, so
+  \begin{equation*}
+    \P_\theta(D(w, c) = 1) = \frac{1}{1 + exp(- v(w)^t v(c))}.
+  \end{equation*}
+  with the same paramters $\Theta = \{v(w), v(c)\}$ as in \ref{eq:def-Theta}.
+  We saw before that computing 
 \printbibliography
 
 \end{document}
