@@ -4,11 +4,6 @@
 \usepackage[utf8]{inputenc}
 \usepackage{mathtools}
 \usepackage{mathabx}
-% \usepackage[ngerman]{babel}
-% \usepackage{paralist}
-% \usepackage{extarrows}
-% \usepackage{dsfont}
-% \usepackage{amsthm}
 
 % bibliography
 \usepackage[backend=biber]{biblatex}
@@ -33,8 +28,15 @@
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\N}{\mathbb{N}}
 \renewcommand{\P}{\mathbb{P}}
-\newcommand{\bigo}{\mathds{O}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\bigO}{\mathcal{O}}
 \DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator{\Pot}{Pot}
+\DeclareMathOperator{\Nodes}{Nodes}
+\DeclareMathOperator{\Int}{Int}
+\DeclareMathOperator{\rootnode}{root}
+\DeclareMathOperator{\height}{height}
 
 \begin{document}
 
@@ -49,84 +51,277 @@
 \section{Introduction}
   Some Introduction.
 
-\section{Skip-gram Model and Distributional Hypothesis}
-  Many natural language proccesing (NLP) tasks require a so called \emph{word embedding}, as does ours.
-  In this section, we give a brief introduction to the theory of word embeddings and outline the state-of-the-art \emph{word2vec} algorithm for creating them.
+\section{Theoretical discussion}
+In this section, we define and discuss the technique of word embeddings used in many recent natural language processing (NLP) tasks.
+We introduce some methods for creating word embeddings and point out underlying assumptions and simplifications of algorithms used in the \emph{word2vec} tool.
+% In this section, we introduce the skip-gram model, the theoretical foundation for many word embedding techniques, rigorously and point out the assumptions and simplifications that underly some recent algorithms like \emph{word2vec}, something we found the literature to be very scarce of.
 
-  Let us first fix some notation used throughout this section.
-  Let $W$ be a finite set.
-  We interpret the set $W$ as set of all words and punctuation marks that occur in text data we examine.
-  Let $T$ be a list composed of elements of $W$, which we interpret as a corpus of correct text, to be used for creating a word embedding.
-  For each word $w \in T$, let $c_w$ be a list of \emph{context} words of $w$.
-  We expect the $c_w$ to be words that are in close proximity to $w$ in some sense, so that $c_w$ contains information related to $w$.
-  Let $C = \{c_w \mid w \in w\}$ be the set of all contexts.
-  A typical choice is the skipgram
-  \begin{equation*}
-    c_w = (w_{-k}, \dots, w_{-1}, w_1, \dots, w_k)
-  \end{equation*}
-  where $(w_{-k}, \dots, w_0 = w, \dots w_k) \subseteq T$ is the sublist of size $2 k + 1$ of $T$ containing $w$ as its middle element, for some $k \in \N$.
-  
-  A word embedding is mapping $v : W \rightarrow \R^d$ for some $d \in \N$.
-  We want $v$ to map similar words to close vectors.
-  For example, we expect the distance $v(\text{``häufig''})$ -- $v(\text{``oft''})$ to be small, while $v(\text{``Hund''})$ and $v(\text{``Mathematik''})$ should be far away.
-  It was discovered that word embeddings can even encode more subtle relationships in simple arithmetical properties.
-  XY et al discovered that their word embedding encodes gender difference as vector difference of word embeddings, so
-  \begin{equation*}
-    v(\text{``king''}) - v(\text{``queen''}) \approx v(\text{``uncle''}) - v(\text{``aunt''}).
-  \end{equation*}
-  The property that embeddings of similar words are to close is essential for our task.
-  We can not hope to learn all possible contexts a punctuation mark can occure, so we need to extrapolate from contexts in the training data to cases in test data.
+\subsection{Word embeddings and distributional hypothesis}
 
-  The informal distributional hypothesis states that similar words occure in similar contexts XY.
-  If the hypothesis is true, we should expect to get good word embeddings if we minimize the distance of words that occure in the same context while maximizing it when they don't.
-  One way to construct word embeddings is the \emph{skipgram model}:
+While to a human speaker the relation of the words ``small'' and ``big'' may be obvious, there is no correspondence of meaning and the representation as strings of characters of the two words.
+Thus, algorithmically, we can only hope to learn aspects of the meaning of the two words by the contexts they appear in.
+The informal statement that this is possble at all, i.e. that the meaning of a word can be reconstructed from contexts in which it is used, is refered to as the ``Distributional Hypothesis'' and was already stated in XY.
+Even assuming that this conjecture holds, the task at hand is made very difficult by the discrete nature of text:
+In training text data, every context a word appears in may be unique without obvious relation to other appearances.
+For example, in the sentences
+\begin{equation*}
+  \textit{``The needle was small.''}
+\end{equation*}
+and
+\begin{equation*}
+  \textit{``A mouse is small.''},
+\end{equation*}
+the adjective ``small'' is used similarly, while all other words are completely different.
+If we hope to learn the meaning of a word from its context, we need an algorithm robust to differences in the actual words used when the meaning of the context is similar.
+For example, if we know that the two words ``was'' and ``is'' are actually just conjugated forms of the verb ``to be'' and that ``needle'' and ``mouse'' are nouns, by noticing that ``small'' and other adjectives are used in similar contexts, we can conclude that they have a common property (being adjectives).
+It has been shown that word embeddings can provide the needed notion of similarity of words.
+A word embedding is a mapping $v : W \rightarrow \R^d$ that assigns a value in $d$-dimensional real space to each word in a finite set of words $W$, with the expectation that vectors of similar words will be close in the embedding space.
+Investigation in recent years have shown, that this is a very promising approach for solving many problems in NLP.
+Not only can similarity as a whole be encoded by distances of vectors, but also much more subtle relationships of words.
+XY et al showed that their word embedding had the property of encoding specific differences in the meaning of words as simple arithmetical differences of their respective embeddings.
+For example, they found that there is a constant gender difference vector, so
+\begin{equation*}
+  v(\text{``king''}) - v(\text{``queen''}) \approx v(\text{``uncle''}) - v(\text{``aunt''}),
+\end{equation*}
+and that the relationship of countries to their capital cities was encoded similarly:
+\begin{equation*}
+  v(\text{``Germany''}) - v(\text{``Berlin''}) \approx v(\text{``France''}) - v(\text{``Paris''}).
+\end{equation*}
 
-  Let $(p_\theta)_{\theta \in \Theta}$ be a family of probability measures on $W \times C$.
-  The parameter $\theta$ will typically contain at least the values of $v$ for every word $w \in W$.
-  The maximum likelihood estimator for $\theta$ based on the observation $T$ has the form
-  \begin{equation*}
-    \hat{\theta} = \argmin_{\theta} \prod_{w \in T} p_\theta(w, c_w),
-  \end{equation*}
-  assuming independence of word -- context pairs occuring in the text.
+\subsection{Model assumptions}
+\label{subsec:model}
+Let us first introduce some notation.
+Fix a finite set $W$ of words.
+Let $T \in W^n$ be a sample of text.
+Our task is to learn about the meaning of words $w \in W$ from their occurences in $T$.
+Fix parameters $k, d \in \N$.
+$d$ will be the the dimension of the target space of the word embedding while $k$ determines the context size, to be set in advance.
+For every subsequence
+\begin{equation*}
+  \dots, w_{-k}, \dots, w_{-1}, w, w_1, \dots, w_k, \dots
+\end{equation*}
+we call a sublist of $(w_{-k}, \dots, w_{-1}, w_1, \dots, w_k)$ (not necessarily continuous) a \emph{context} of this occurence of $w$.
+Thus, a context is a list of consecutive words with some words skipped (also refered to as \emph{skip-gram}).
+Let $C$ be the set of all such contexts in $T$.
+According to the distributional hypothesis (and for $k$ and $T$ sufficiently large), to understand the meaning of a word $w \in W$, it suffices to know the distribution of the random variable
+\begin{equation*}
+  \label{eq:cond-expectation}
+  X = (\mathcal{W}, \mathcal{C})
+\end{equation*}
+where $\mathcal{W}$ and $\mathcal{C}$ are random variables obtained by randomly selecting a word $\mathcal{W} \in W$ and one of its contexts $\mathcal{C} \in C$ in a body of text.
+We intentionally leave the specifics of the sampling process vague, to be discussed in section XY.
 
-  A widely used choice of $p_\theta$ is the normalized softmax function:
-  \begin{equation*}
-    \label{eq:def-Theta}
-    \Theta = \{v(w), v(c_w) \mid w \in W, v(w) \in \R^d, v(c_w) \in \R^d\}
-  \end{equation*}
-  \begin{equation}
-    \label{eq:softmax-p}
-    p_\theta(w, c) = \frac{\exp(v(w)^t v(c))}{\sum_{c' \in C} \exp(v(w)^t v(c'))}
-  \end{equation}
-  Note that $\hat\theta$ will not only contain embeddings for every word $w$ but also for every context $c \in C$.
-  $\hat\theta$ is the maximizer of
-  \begin{equation}
-    \label{eq:hat-theta}
-    \sum_{w \in W} \left( v(w)^t v(c_w) - \log \left(\sum_{c \in C} \exp(v(w)^t v(c))\right) \right).
-  \end{equation}
-  Heuristically, maximizing \ref{eq:hat-theta} is in line with our goal of mapping similar words (that occure in similar contexts according to the distributional hypothesis) on similar values:
-  \ref{eq:hat-theta} is maximized if $v(w)^t v(c_w)$, a value related to the cosine distance of the two vectors, is big and penalized by the corresponding term for arbitrary other contexts $c$.
+Our ultimate goal is to create a good word embeddings, which we hope to find from estimating the distribution of $X$.
+Thus, it is natural to choose $V = \{ v : W \rightarrow \R^d \}$, the set of all $\R^d$ valued dictionaries with domain $W$, as parameter for the family of distributions with which we model $X$.
+By abuse of notation, we refer to the embedding of a context, derived from an embedding of words $v \in V$, by $v(c) \in \R^d$ and define it as the average of the individual words in the context
+\begin{equation*}
+  v(c) = \frac{1}{|c|} \sum_{w \in C} v(w).
+\end{equation*}
+Note that $v(c)$ does not depend on the order of the words in $c$, so our model has a so called \emph{bag of words} notion of context and is invariant under permutation whithin contexts.
 
-  Evaluating $p_\theta$ in this form is obviously very expensive, with an asymptotic time complexity of $\mathcal{O}(|T|)$.
-  It has been suggested to remedy this situation by calculating the denominator in \ref{eq:softmax-p} with a huffman tree built from the occurence statistic of $W$ in $T$, reducing the computational cost to $\mathcal{O}(\log(|T|))$.
+We assume that $X$ is controlled by a softmax distribution, so
+\begin{equation*}
+  \P(X = (w, c)) = \P_{v_0}(X = (w, c)) = \exp \left(v_0(w)^t v_0(c)\right) \left( \sum_{w' \in W, c' \in C} \exp \left( v_0(w')^t v_0(c') \right) \right)^{-1}
+\end{equation*}
+for a true parameter $v_0 \in V$.
+Let $X_1 = (w_1, c_1), \dots, X_n = (w_n, c_n)$ be independent observations, sampled from the $\P_{v_0}$ distribution.
+The maximum likelihood estimator for $v_0$ is given by
+\begin{align}
+  \begin{split}
+  \label{eq:def-ml-estimator}
+  \hat v &= \argmax_{v \in V} \P_v(X_1, \dots, X_n) = \argmax_{v \in V} \prod_{i = 1}^n \P_v(X_i) \\
+             & = \argmax_{v \in V} \prod_{i = 1}^n \left( \exp \left(v(w)^t v(c) \right) \left(\sum_{w' \in W, c' \in C} \exp \left(v(w')^t v(c')\right) \right)^{-1} \right) \\
+             & = \argmax_{v \in V} \sum_{i = 1}^n \left( v(w)^t v(c) - \log \left(\sum_{w' \in W, c' \in C} \exp \left(v(w')^t v(c')\right) \right) \right)
+  \end{split}
+\end{align}
 
-  We don't discuss this approach further and instead describe the computationally less complex variant \emph{word2vec}, proposed by Mikolov et al. in \cite{DBLP:journals/corr/MikolovSCCD13}.
-  
-  \section{Word2vec}
-  The \emph{word2vec} algorithm is based on estimating the distrubtion of the random Variable $D : W \times C \rightarrow \{0, 1\}$, defined by
-  \begin{equation*}
-    D(w, c) = \begin{cases}
-      1 & \text{if $w$ occures in $T$ with context $c$} \\
-      0 & \text{otherwise}.
+Heuristically, optimizing this term yields good word embeddings:
+Measure the distance $q(v_1, v_2)$ of vectors $v_1, v_2 \in \R^d$ by their cosine distance, i.e.
+\begin{equation*}
+  q(v_1, v_2) = 1 - \frac{v_1^t v_2}{\lVert v_1 \rVert_2 \lVert v_2 \rVert_2} = 1 - \cos(\alpha)
+\end{equation*}
+where $\alpha$ is the angle between $v_1$ and $v_2$.
+Thus, vectors are considered close if their direction is similar (so $\cos(\alpha)$ is close to 1) and far away if they face opposite directions (so $\cos(\alpha)$ is nearly -1).
+Clearly, the sample probability $\P_\theta(X_1, \dots, X_n)$ will be large if we maximize 
+\begin{equation*}
+  v(w)^t v(c) = \frac{1}{|c|} \sum_{w' \in c} v(w)^t v(w')
+\end{equation*}
+for every word $w \in W$ that occures in context $c$, thereby reducing the pairwise of such words, and simultaneously maximize the angle between vectors of words that do not occure in similar contexts.
+
+\subsection{Estimators for conditional expectancies}
+\label{subsec:skip-gram-cbow}
+As of today, the maximum likelihood estimator $\hat v$ has only theoretical importance.
+In practice, instead of maximizing the sample probability of observations $(\mathcal{W}_i, \mathcal{C}_i)$, estimators maximizing the conditional probabilities $\P(\mathcal{W}_i = w_i \mid \mathcal{C}_i = c_i)$ and  $\P(\mathcal{C}_i = c_i \mid \mathcal{W}_i = w_i)$, respectively, are used.
+In this spirit, we define the estimators $\bar v$ and $\tilde v$ by
+\begin{align}
+  \label{eq:def-bar-v}
+  \begin{split}
+    \bar v & = \argmax_{v \in V} \prod_{i = 1}^n \P_v(\mathcal{W}_i = w_i \mid \mathcal{C}_i = c_i) \\
+           & = \argmax_{v \in V} \left( \prod_{i = 1}^n \P_v((\mathcal{W}_i, \mathcal{C}_i) = (w_i, c_i) ) \right) \cdot \left( \prod_{i = 1}^n \P_v(\mathcal{C}_i = c_i) \right)
+  \end{split} \\
+  \begin{split}
+    \tilde v & = \argmax_{v \in V} \prod_{i = 1}^n \P_v(\mathcal{C}_i = w_i \mid \mathcal{W}_i = c_i) \\
+             & = \argmax_{v \in V} \left( \prod_{i = 1}^n \P_v((\mathcal{W}_i, \mathcal{C}_i) = (w_i, c_i) ) \right) \cdot \left( \prod_{i = 1}^n \P_v(\mathcal{W}_i = w_i) \right)
+  \end{split}
+\end{align}
+Assuming consistency of the maximum likelihood estimator $\hat v$, $\bar v$ will oversmooth the estimated distribution of $\mathcal{C}$ because $\prod_{i = 1}^n \P_v(\mathcal{C}_i = c_i)$ is maximized by distributing probability mass uniformly among all the values $c_i$ and likewise $\tilde v$ will oversmooth the distribution of $\mathcal{W}$.
+
+We consider these estimators because they have better computational properties:
+Plugging
+\begin{align}
+  \label{eq:conditional-probability}
+  \begin{split}
+    \P_v(\mathcal{W} = w \mid \mathcal{C} = c) & = \frac{\P_v(\mathcal{W} = w, \mathcal{C} = c)}{\P_v(\mathcal{C} = c)} \\
+                                               & = \frac{\exp(v(w)^t v(c)) \left( \sum\limits_{w' \in W, c' \in C} \exp(v(w')^t v(c')) \right)^{-1}}{\sum\limits_{w'' \in W} \exp(v(w'')^t v(c)) \cdot \left( \sum\limits_{w' \in W, c' \in C} \exp(v(w')^t v(c')) \right)^{-1}} \\
+                                               & = \exp(v(w)^t v(c)) \cdot \left( \sum\limits_{w'' \in W} \exp(v(w'')^t v(c)) \right)^{-1}
+  \end{split}
+\end{align}
+into (\ref{eq:def-bar-v}) yields
+\begin{align}
+  \label{eq:calc-bar-v}
+  \begin{split}
+    \bar v & = \argmax_{v \in V} \prod_{i = 1}^n \left(\exp(v(w_i)^t v(c_i)) \cdot \left( \sum\limits_{w' \in W} \exp(v(w')^t v(c_i)) \right)^{-1} \right) \\
+           & = \argmax_{v \in V} \sum_{i = 1}^n \left(v(w_i)^t v(c_i) - \log \left( \sum\limits_{w' \in W} \exp(v(w')^t v(c_i)) \right) \right).
+  \end{split}
+\end{align}
+Notice that the inner sum in (\ref{eq:calc-bar-v}) consists of only $|V|$ terms and is therefore easier to compute than the inner sum in (\ref{eq:def-ml-estimator}) which is composed of $|C| \cdot |W| \geq |W|^2$ addends.
+By duality, it holds that
+\begin{equation}
+  \label{eq:calc-tilde-v}
+  \tilde v = \argmax_{v \in V} \sum_{i = 1}^n \left(v(w_i)^t v(c_i) - \log \left( \sum\limits_{c' \in C} \exp(v(w_i)^t v(c')) \right) \right).
+\end{equation}
+All further results are stated for $\bar v$, although similar results hold for $\tilde v$.
+We trust the reader to derive the necessary adjustments by himself.
+
+\subsection{Stochastic gradient descent}
+In this section, we give a brief overview of the technique of \emph{stochastic gradient descent (SGD)}, used frequently for calculating minimizers such as \ref{(4)} or \ref{(5)}.
+Readers familiar with the concept may want to skip this section or come back to it later on.
+
+Stochastic gradient descent is a commonly used family of algorithms for computing
+\begin{equation}
+  \label{eq:sgd}
+  \argmin_\theta \sum_i^n Q_i(\theta),
+\end{equation}
+the minimizer of a sum of real functions $Q_1, \dots, Q_n$.
+
+Such functions frequently arise in statistics when considering so called \emph{M-Estimators}.
+For example, let $(f_\theta)_{\theta \in \Theta}$ be a family of probability densities and $X_1, \dots, X_n$ be independent samples, drawn from the distribution $f_{\theta_0}$ for some $\theta_0 \in \Theta$.
+The maximum likelihood estimator $\hat \theta$ for $\theta_0$ is defined by
+\begin{align*}
+  \hat \theta & = \argmax_{\theta \in \Theta} \prod_{i = 1}^n f_\theta(X_i) \\
+              & = \argmin_{\theta \in \Theta} \sum_{i = 1}^n - \log(f_\theta(X_i)),
+\end{align*}
+so computing $\hat \theta$ amounts to solving the optimization problem (\ref{eq:sgd}) with $Q_i(\theta) = -\log(f_\theta(X_i))$.
+
+Traditional gradient methods try to solve the problem iteratively by producing a sequence of values $\theta_1, \theta_2, \dots$ by the rule
+\begin{equation}
+  \label{eq:traditional-gradient-descent}
+  \theta_{i + 1} = \eta \cdot \sum_{i = 1}^n \nabla_\theta Q_i(\theta_i),
+\end{equation}
+with start value $\theta_1 \in \Theta$ and step size $\eta \in \R$ chosen for the specific problem at hand, that converges under suitable conditions to a local minimum.
+
+Stochastic gradient descent replaces the expensive calculation of $\nabla_\theta Q$ in every step by a single value $\nabla_\theta Q_i$, so that the update rule (\ref{eq:traditional-gradient-descent}) becomes
+\begin{equation}
+  \label{eq:stochastic-gradient-descent}
+  \theta_{i + 1} = \eta \cdot \nabla_\theta Q_i(\theta_i).
+\end{equation}
+After calculating $\theta_n$, the process may be repeated by setting $\theta_1 \coloneqq \theta_n$.
+The sequence $\theta_i$ converges under some smoothness hypothesis and when the step size $\eta$ is decreased steadily.
+
+\subsection{Hierarchical softmax}
+Computing the estimator $\bar v$ by (\ref{eq:calc-bar-v}) via SGD is not feasible because the calculation of the update step (\ref{eq:stochastic-gradient-descent}) is an $\mathcal{O}(|W|)$ operation because the normalization term
+\begin{equation}
+  \sum\limits_{w'' \in W} \exp(v(w')^t v(c))
+\end{equation}
+depends on the word vectors of all words $w \in W$.
+To remedy this situation, Benigo et al.\@ proposed \emph{hierarchical softmax} to reduce the costs of the update step to $\mathcal{O}(\log(|W|)$ \cite{Morin05hierarchicalprobabilistic}.
+
+Let $D$ be a binary tree whose leaf nodes are exactly the words $w \in W$.
+We replace $V = \{ v : W \rightarrow \R^d \}$ by 
+\begin{equation*}
+  V = \{ v : W \sqcup \Int(D) \rightarrow \R^d \},
+\end{equation*}
+where $\Int(D)$ denotes the set of all internal (i.e.\@ non-leaf) nodes of $D$.
+Thus, in addition to word embeddings we also learn embeddings of the internal words of $D$.
+Let $s :\Int(D) \setminus \{\rootnode(D)\} \rightarrow \{1, -1\}$ with 
+\begin{equation*}
+  s(N) = \begin{cases}
+    1 & \text{if N is a left child} \\
+    -1 & \text{otherwise.}
       \end{cases}
-  \end{equation*}
-  We model $D(w, c)$ as a softmax-distruted binary variable, so
-  \begin{equation*}
-    \P_\theta(D(w, c) = 1) = \frac{1}{1 + exp(- v(w)^t v(c))}.
-  \end{equation*}
-  with the same paramters $\Theta = \{v(w), v(c)\}$ as in \ref{eq:def-Theta}.
-  We saw before that computing 
-\printbibliography
+\end{equation*}
+($s$ may be chosen arbitrarily, we only need that $s(N_1) = -s(N_2)$ for siblings $N_1, N_2$.) \\
+For every $w \in W$, there is a unique path 
+\begin{equation*}
+  \rootnode(D) = l(w, 0), l(w, 1), \dots, l(w, n_w) = w
+\end{equation*}
+from the root node to $w$.
+Define
+\begin{equation}
+  \P_v(\mathcal{W} = w \mid \mathcal{C} = c) = \prod_{i = 0}^{n_w - 1} \sigma \left(s(l(w, i + 1)) \cdot v(l(w, i))^t v(c) \right)
+\end{equation}
+where $v(c) \in \R^d$ is an embedding of the context $c$, derived from the word embedding, and $\sigma$ is the sigmoid function
+\begin{equation*}
+  \sigma(x) = \frac{1}{1 + \exp(-x)}.
+\end{equation*}
+While Mikolov et al.\@ consider only single-word contexts in \cite{DBLP:journals/corr/MikolovSCCD13} , where the choice of $v(c)$ is obvious, Bengio et al.\@ model this as $v(c) = M (v(w_1)^t, \dots, v(w_n)^t)^t$ for $c = (w_1, \dots, w_n)$ and an additional parameter matrix $M$, to be learned in addition to $v$.
+By induction on $\height(D)$, $\sum_{w \in W} \P_v(\mathcal{W} \mid \mathcal{C}) = 1$, so $\P_v(\cdot \mid \mathcal{C} = c)$ is a well defined probabilty measure.
+Intuitively, we may interpret sampling from $\P_v$ as a random walk starting at the root node, where at each internal node $N$ we continue to the left child with probability $\sigma(v(N)^t v(c)$ and to the right one with probability $1 - \sigma(v(N)^t v(c)) = \sigma(- v(N)^t v(c))$ until a leaf node is reached.
+
+Clearly, $\P(\mathcal{W} = w \mid \mathcal{C} = c)$ only depends on $v(N)$ for ancestor nodes $N$ of $w$ and the embeddings of the individual words in $c$.
+If $D$ is balanced and the context size is bounded, these are only $\mathcal{O}(|\log(|W|)$ values, which makes calculating the maximum likelihood estimator via SGD computationally viable.
+
+Word embeddings learned by this model depend on the choice of $D$.
+Mikolov et al.\@ construct a Huffman tree from $W$ to speed up computation of $\P_v(\cdot \mid c)$ for frequently used words by placing these words near the root node, while Bengio et al.\@ derive the tree structure from the WordNet \cite{asdfasdfasdf} semantic database so that semantically related words are placed near to each other in the tree.
+In practice, Mikolov et al.\@ found that \emph{negative sampling}, which we introduce in the next section, outperformed their hierarchical softmax-based approach.
+
+\subsection{Negative sampling}
+Consider the following problem:
+Suppose given a pair $(w, c)$ of word and context.
+Was $(w, c)$ extracted from actual text or was it sampled from a noise distrubtion?
+We model this decision as a stochastic mapping $\mathcal{D} : W \times C \rightarrow \{0, 1\}$ with $\mathcal{D}(w, c) = 1$ if and only if $(w, c)$ stems from text.
+In the process of learning the function $\mathcal{D}$, we hope to create good word embeddings.
+We use $V = \{v : W \rightarrow \R^d \}$ as set of parameters in the logistic model
+\begin{equation}
+  \P(D(w, c) = 1) = \sigma(v(w)^t v(c)) = \frac{1}{1 - \exp(-v(w)^t v(c))}.
+\end{equation}
+Let $(w_1, c_1), \dots, (w_n, c_n)$ be word -- context pairs extracted from text.
+For each $i \in \{1, \dots, n\}$, sample $s$ pairs $(w_{i, 1}, c_{i, 1}, \dots, w_{i, s}, c_{i, s})$ of negative examples from a noise distribution $Q$, where $s \in \N$ is model parameter, the \emph{negative sampling rate}.
+The maximum likelihood estimator $\check v$ for $v$ -- assuming independence of all observations -- is given by
+\begin{align}
+  \label{eq:ns-estimator}
+  \begin{split}
+    \check v & = \argmin_v \prod_{i=1}^n \left( \sigma(v(w_1)^t v(c_1)) \prod_{j = 1}^s \sigma(v(w_{i, j})^t v(c_{i, j})) \right) \\
+             & = \argmin_v \sum_{i=1}^n \left( \log \left(\sigma(v(w_1)^t v(c_1)) \right) - \sum_{j = 1}^s \log \left( \sigma(v(w_{i, j})^t v(c_{i, j})) \right) \right),
+  \end{split}
+\end{align}
+which can be calculated by SGD.
+In empirical tests, Mikolov et al.\@ found that the negative sampling rate $s$ may be fairly small.
+On small data sets, they found $5 \leq s \leq 20$ to be a good choice, while on larger data sets, even $2 \leq s \leq 5$ was sufficient.
+In further experiments, they found the noise distribution
+\begin{equation}
+  \label{eq:noise-distribution}
+  Q(\{w\}) = \frac{{f_w}^{3 \over 4}}{\sum_{w' \in W} {f_{w'}}^{3 \over 4}},
+\end{equation}
+with $f_w$ the word frequency of $w \in W$ in training text, to yield significantly better results than either the uniform distribution or the unscaled frequency distribution.
+To our knowledge, there is no theoretical explanation for this result.
+$Q$ is a slightly smoothed frequency distribution, so it seems a small bias towards less frequently used words works well with NEG.
+
+The biggest advantage of negative sampling compared to the other techniques is its simplicity.
+Because the update step for SGD with objective (\ref{eq:ns-estimator}) is an $\mathcal{O}(1)$ operation, training time grows only linearly with $|W|$ so that training on large data sets is feasible.
+Mikolov et al.\@ showed that this advantage was sufficient to outperform more sophisticated techniques such as hierarchical softmax or deep neural networks (in fact, (\ref{eq:ns-estimator}) can be interpreted as optimizing a shallow neural network) in various NLP tasks such as analogy tests.
+
+A peculiar detail of their algorithm is that, for fixed $(w, c)$ from sample data, negative examples are not sampled from a noise distribution on $W \times C$, but only either the words or the contexts are random.
+In the first formulation, the \emph{continuous bag-of-words} (CBOW) model, the negative samples are $(w_1, c), \dots, (w_s, c)$ with noise words $w_i$, whereas in the \emph{skip-gram} model, the negative samples are $(w, c_1), \dots, (w, c_s)$ with noise contexts $c_i$.
+Since Mikolov et al.\@ consider only contexts consisting of a single word, the distribution $Q$ from (\ref{eq:noise-distribution}) can be used for both approaches.
+When using a precise optimization algorithm instead of SGD, CBOW and skip-gram and the model we introduced above are equivalent, as the the positive samples $(w_1, c_1), \dots, (w_n, c_n)$ are typically sampled from text such that the components $w_1, \dots, w_n$ and $c_1, \dots, c_n$ approximate the frequency distribution (possibly smoothed, see section XY).
+We do not know why these sampling methods were chosen.
+One reason may be their higher numerical stability in SGD, because the gradients are smaller.
+In \cite{DBLP:journals/corr/MikolovSCCD13}, it is reported that, for large bodies of text, their skip-gram estimator was less prone to oversmoothing than CBOW.
+Although it may be interesting to compare NEG as in (\ref{eq:ns-estimator}) to the CBOW and skip-gram estimators, this was not done in this work due to time constraints.
+
+\subsection{Sampling}
+
 
 \end{document}
 
