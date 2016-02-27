@@ -2,11 +2,10 @@ from utils import iterlen, lines_iter, subsequences
 
 from itertools import chain, repeat
 from numpy import random, fromiter
-
-def create_
+import gzip
 
 def random_corpus_ngrams(corpus_path, N, number, predicate=None):
-    with open(corpus_path) as corpus:
+    with gzip.open(corpus_path) as corpus:
         def iter_ngrams():
             corpus.seek(0)
             line_to_ngrams = lambda line: subsequences(line.split(), N)

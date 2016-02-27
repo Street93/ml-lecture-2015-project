@@ -1,18 +1,54 @@
+from utils import compress, decompress
+
 import numpy as np
 import os
-from tempfile import NamedTemporaryFile
+import gzip
 import subprocess
+from pathlib import PurePath
+import random
+import string
 
-def create_word_embedding(infile, outfile, min_count=5, size=100):
-    subprocess.run([ 'tools/word2vec/word2vec' \
-                   , '-min-count', str(min_count) \
-                   , '-train', infile \
-                   , '-size', str(size) \
-                   , '-output', outfile ])
+def create_word_embedding(infile, outfile, min_count=5, size=100, downsample=True, estimator='skipgram', negative=5):
+    def run_on(actual_infile):
+        assert estimator in ['skipgram', 'cbow']
+        use_cbow = estimator == 'cbow'
+        sample = 10e-3
+        if not downsample:
+            sample = 1
+        subprocess.run([ 'tools/word2vec/word2vec' \
+                       , '-train', actual_infile \
+                       , '-output', outfile \
+                       , '-min-count', str(min_count) \
+                       , '-size', str(size) \
+                       , '-sample', str(downsample) \
+                       , '-negative', str(negative) \
+                       , '-cbow', str(int(use_cbow)) ])
+
+    compress_flag = False
+    outfilep = PurePath(outfile)
+    if outfilep.suffix == '.gz':
+        outfile = str(outfilep.parent / outfilep.stem)
+        compress_flag = True
+    
+    infilep = PurePath(infile)
+    if infilep.suffix == '.gz':
+        rndstr = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20))
+        tmp_filename = '/tmp/' + rndstr
+        try:
+            decompress(infile, keep=True, outfile=tmp_filename)
+            run_on(tmp_filename)
+        finally:
+            if os.path.exists(tmp_filename):
+                os.remove(tmp_filename)
+    else:
+        run_on(infile)
+
+    if compress_flag:
+        compress(outfile)
 
 class WordEmbedding:
     def __init__(self, file_name):
-        f = open(file_name)
+        f = gzip.open(file_name, mode='rt')
 
         firstline = f.readline()
         [word_num_str, dimension_str] = firstline.split()
@@ -38,35 +74,8 @@ class WordEmbedding:
         
         assert len(self.word_indices) == word_num
 
-    def wordOfIndex(self, index):
-        for w, i in self.word_indices.items():
-            if i == index:
-                return w
-
     def __getitem__(self, param):
-        if type(param) is str:
-            return self.values[self.word_indices[param]]
-        if type(param) is np.ndarray:
-            assert param.shape == (self.values.shape[1],)
-            best_index = None
-            best_distance = float('inf')
-            for i in range(0, self.values.shape[0]):
-                distance = np.linalg.norm(self.values[i] - param)
-                if distance < best_distance:
-                    best_distance = distance
-                    best_index = i
-
-            return self.wordOfIndex(best_index)
-    
-    def nearest(self, word):
-        value = self[word]
-
-        distances = np.zeros(self.values.shape[0])
-        for i in range(0, len(distances)):
-            distances[i] = np.linalg.norm(self.values[i] - value)
-
-        for i in np.argsort(distances):
-            yield self.wordOfIndex(i)
+        return self.values[self.word_indices[param]]
 
 def ngram_to_vec(ngram, embedding):
     return list(chain.from_iterable(map(embedding.__getitem__, ngram)))

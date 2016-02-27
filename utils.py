@@ -1,5 +1,8 @@
 from time import sleep
 from numpy import ndarray, array, float32, float64
+from pathlib import Path
+import gzip
+import os
 
 
 def lines_iter(f):
@@ -74,3 +77,24 @@ def genarr_first(genarr):
 def duplicate_gen(gen):
     for x in gen:
         yield (x, x)
+
+def compress(filename, keep=False, outfile=None):
+    if outfile is None:
+        outfile = str(Path(filename).with_suffix('.gz'))
+    with open(filename, mode='rb') as inf:
+        with gzip.open(outfile, mode='xb') as outf:
+            for chunk in iter((lambda: inf.read(1024)), b''):
+                outf.write(chunk)
+    if not keep:
+        os.remove(filename)
+
+def decompress(filename, keep=False, outfile=None):
+    if outfile is None:
+        outfile = str(Path(filename).parent / Path(filename).stem)
+    with gzip.open(filename, mode='rb') as inf:
+        with open(outfile, mode='xb') as outf:
+            for chunk in iter((lambda: inf.read(1024)), b''):
+                outf.write(chunk)
+    if not keep:
+        os.remove(filename)
+
