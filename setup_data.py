@@ -4,9 +4,9 @@ import spiegel
 from spiegel import load_raw_articles, SpiegelIssue, IssueDoesNotExist
 from sanitize import sanitize_article
 from utils import retrying
-from wordvec import create_word_embedding, WordEmbedding
-from ngram import random_corpus_ngrams
-
+from texttools import create_word_embedding, WordEmbedding, random_corpus_ngrams, \
+                      create_vocabulary, load_vocabulary
+import gzip
 from numpy import random
 from os import makedirs
 import requests
@@ -64,35 +64,35 @@ def create_embeddings():
                                              , estimator=estimator \
                                              , negative=negative )
 
+def create_vocabularies():
+    makedirs('data/vocabularies', exist_ok=True)
+    for corpuspath in Path('data/corpora').iterdir():
+        corpusname = corpuspath.stem
+        vocabfile = 'data/vocabularies/{}.gz'.format(corpusname)
+        vocab = create_vocabulary(str(corpuspath), vocabfile)
+
 def create_ngrams():
-    embedding = WordEmbedding('data/word-embedding')
-    def valid_ngram(ngram):
-        def known_word(word):
-            try:
-                embedding[word]
-                return True
-            except:
-                return False
-        return all(map(known_word, ngram))
-
-    for N in [4, 5, 10, 11]:
-        ngrams = random_corpus_ngrams( 'data/text-corpus' \
-                                    , N \
-                                    , number=50000 \
-                                    , predicate=valid_ngram )
-
-        with open('data/{}-gram-train'.format(N), mode='w') as f:
-            for ngram in islice(ngrams, 40000):
-                print(' '.join(ngram), file=f)
-        with open('data/{}-gram-test'.format(N), mode='w') as f:
-            for ngram in ngrams:
-                print(' '.join(ngram), file=f)
+    makedirs('data/ngrams', exist_ok=True)
+    for corpuspath in Path('data/corpora').iterdir():
+        corpusname = corpuspath.stem
+        vocab = load_vocabulary('data/vocabularies/' + corpusname + '.gz')
+        def valid_ngram(ngram):
+            return all(map(lambda word: word in vocab, ngram))
+        for N in [4, 5, 10, 11]:
+            ngrams = random_corpus_ngrams( str(corpuspath) \
+                                         , N \
+                                         , number=10000 \
+                                         , predicate=valid_ngram )
+            outfile = 'data/ngrams/{}-{}-grams.gz'.format(corpusname, N)
+            with gzip.open(outfile, mode='xt') as f:
+                for ngram in ngrams:
+                    print(' '.join(ngram), file=f)
 
 def main():
     print('Downloading Spiegel issues... ')
     download_spiegel()
     print('Done.')
-    print('Creating text coropora... ')
+    print('Scraping text corpora... ')
     create_corpora()
     print('Done.')
     print('Creating text embeddings... ')
