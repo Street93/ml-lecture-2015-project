@@ -66,8 +66,8 @@ def create_word_embedding(infile, outfile, min_count=5, size=100, downsample=Tru
     
     infilep = PurePath(infile)
     if infilep.suffix == '.gz':
-        rndstr = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(20))
-        tmp_filename = '/tmp/' + rndstr
+        rndstr = ''.join(random.choice(list(string.ascii_uppercase + string.digits)) for _ in range(10))
+        tmp_filename = '/tmp/' + infilep.stem + rndstr
         try:
             decompress(infile, keep=True, outfile=tmp_filename)
             run_on(tmp_filename)
@@ -114,28 +114,17 @@ class WordEmbedding:
 def ngram_to_vec(ngram, embedding):
     return list(chain.from_iterable(map(embedding.__getitem__, ngram)))
 
-def random_corpus_ngrams(corpus_path, N, number, predicate=None):
+def random_corpus_ngrams(corpus_path, N, predicate=None):
+    ngrams = []
     with gzip.open(corpus_path, mode='rt') as corpus:
-        def iter_ngrams():
-            corpus.seek(0)
-            line_to_ngrams = lambda line: subsequences(line.split(), N)
-            lines = lines_iter(corpus)
-            ngrams = chain.from_iterable(map(line_to_ngrams, lines))
-            if predicate:
-                ngrams = map(list, ngrams)
-                ngrams = filter(predicate, ngrams)
-            return ngrams
-            
-        ngram_num = iterlen(iter_ngrams())
+        lines = lines_iter(corpus)
+        line_to_ngrams = lambda line: map(list, subsequences(line.split(), N))
+        ngrams = chain.from_iterable(map(line_to_ngrams, lines))
+        
+        if predicate is not None:
+            ngrams = filter(predicate, ngrams)
 
-        if number > ngram_num:
-            raise RuntimeError('Corpus not long enough')
+        ngrams = list(ngrams)
 
-        includes = repeat(True, number)
-        excludes = repeat(False, ngram_num - number)
-        flags = fromiter(chain(includes, excludes), dtype=bool)
-        random.shuffle(flags)
-
-        ngrams = array([list(ngram) for (include, ngram) in zip(flags, iter_ngrams()) if include])
-        random.shuffle(ngrams)
-        return ngrams
+    random.shuffle(ngrams)
+    return ngrams
