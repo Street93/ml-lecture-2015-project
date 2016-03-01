@@ -4,6 +4,7 @@ from pathlib import Path
 from random import randrange
 import gzip
 import os
+from io import StringIO
 
 
 def lines_iter(f):
@@ -109,3 +110,9 @@ def random_round_robin(*gens):
         except StopIteration:
             del gens[gen_index]
 
+def hyphen_format(t):
+    strio = StringIO()
+    print(*t, sep='-', end='', file=strio)
+    if strio.getvalue() == '':
+        strio.write('-')
+    return strio.getvalue()

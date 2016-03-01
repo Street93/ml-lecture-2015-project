@@ -1,6 +1,7 @@
 from utils import to_ndarray
 
 from sklearn.neighbors import NearestNeighbors
+from sklearn.qda import QDA
 from numpy import array
 
 
@@ -34,5 +35,16 @@ def nn_classifier(train_XY, k=1):
             best_label = max(set(train_Y), key=lambda label: neighbor_labels.count(label))
             response_Y.append(best_label)
         return to_ndarray(response_Y, dtype=int)
+
+    return classify
+
+def qda_classifier(train_XY):
+    train_X, train_Y = splitsave_XY(train_XY)
+    
+    qda = QDA().fit(train_X, train_Y)
+
+    def classify(test_X):
+        test_X = to_ndarray(test_X)
+        return qda.predict(test_X)
 
     return classify
