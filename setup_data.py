@@ -88,7 +88,7 @@ def create_ngrams(dataconfig):
 
 
 def create_corpora():
-    makedirs('data/copora', exist_ok=True)
+    makedirs('data/corpora', exist_ok=True)
     with gzip.open('data/corpora/spiegel-full.gz', mode='wt') as f:
         articles = map(sanitize_article, spiegel.iter_issues_articles())
         for article in articles:
