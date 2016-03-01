@@ -1,6 +1,7 @@
 from time import sleep
-from numpy import ndarray, array, float32, float64
+from numpy import ndarray, array, float32, float64, int32, int64
 from pathlib import Path
+from random import randrange
 import gzip
 import os
 
@@ -32,7 +33,7 @@ def retrying(exception_class, retries=1, retry_delay=None):
     return wrap
 
 def to_ndarray(it, dtype=float32):
-    if type(it) in [float, int, bool, ndarray, float32, float64]:
+    if type(it) in [float, int, bool, ndarray, float32, float64, int32, int64]:
         return it
 
     return array([to_ndarray(subgen) for subgen in it], dtype=dtype)
@@ -97,4 +98,14 @@ def decompress(filename, keep=False, outfile=None):
                 outf.write(chunk)
     if not keep:
         os.remove(filename)
+
+def random_round_robin(*gens):
+    gens = list(map(iter, gens))
+    while len(gens) != 0:
+        gen_index = randrange(0, len(gens))
+        gen = gens[gen_index]
+        try:
+            yield next(gen)
+        except StopIteration:
+            del gens[gen_index]
 

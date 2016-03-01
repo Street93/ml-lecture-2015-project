@@ -1,4 +1,11 @@
+from learn import nn_classifier
+
 from collections import namedtuple
+from functools import partial
+
+# from learn import nn_classifer, qda_classifier, gaussian_kde_classifier, \
+#                   tophat_kde_classifier, random_forest_classifier
+
 
 class DataConfig(namedtuple('DataConfig', \
     'corpus dimension estimator negative downsampling ngram_size')):
@@ -16,11 +23,17 @@ class DataConfig(namedtuple('DataConfig', \
         n1grams = template.format(self.corpus, self.ngram_size + 1)
         return (ngrams, n1grams)
     
-class RunConfig(namedtuple('RunConfig', 'dataconfig algorithm punctuation')):
+class RunConfig(namedtuple('RunConfig', 'dataconfig algorithm punctuation train_size')):
 
     def resultpath(self):
         ngrampath = Path(self.dataconfig.ngrampaths()[0])
-        return 'data/ngram/{}-{}-{}.gz'.format(ngrampath.stem, self.algorithm, self.punctuation)
+        return 'data/ngram/{}-{}-{}-{}.gz'.format( ngrampath.stem, self.algorithm \
+                                                 , self.punctuation, self.train_size)
+
+    def classify_trainer(self):
+        m = { 'nn': nn_classifier \
+            , 'nn-5': partial(nn_classifier, k=5) }
+        return m[self.algorithm]
 
 dataconfigs = [DataConfig(corpus, dimension, estimator, negative, downsampling, ngram_size) \
                   for corpus in ['spiegel-full'] \
@@ -30,7 +43,8 @@ dataconfigs = [DataConfig(corpus, dimension, estimator, negative, downsampling, 
                   for downsampling in [True, False] \
                   for ngram_size in [4, 10]]
 
-runconfigs = [RunConfig(dataconfig, algorithm, punctuation) \
+runconfigs = [RunConfig(dataconfig, algorithm, punctuation, train_size) \
                  for dataconfig in dataconfigs \
-                 for algorithm in [] \
-                 for punctuation in [',', '.', '!', '?', '.,!?']]
+                 for algorithm in ['nn'] \
+                 for punctuation in [',', '.', '!', '?', '.,!?'] \
+                 for train_size in [1000]] # , 5000, 10000, 50000, 10000]]

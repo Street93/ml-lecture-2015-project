@@ -1,179 +1,63 @@
-#!/usr/bin/env python3
+from utils import random_round_robin
+from texttools import WordEmbedding
+from learn import splitsave_XY
 
-from learn import train_nn_classifier, train_qda_classifier, train_lstsq_qda_classifier, \
-                  train_gaussian_kde_classifier, train_tophat_kde_classifier, \
-                  train_random_forest_classifier, train_lstsq_random_forest_classifier
-from wordvec import WordEmbedding
-from utils import lines_iter, to_ndarray, genarr_first, duplicate_gen
+from itertools import repeat, starmap, islice
+import gzip
+from copy import copy
 
-from itertools import chain, islice
-from functools import partial
-import matplotlib.pyplot as plt
-from numpy import ones, zeros
-from time import time
-from io import StringIO
+def iter_ngrams(dataconfig):
+    paths = dataconfig.ngrampaths()
+    def path_to_ngrams(path):
+        f = gzip.open(path, mode='rt')
+        for line in f:
+            yield line.split()
 
-def iter_ngrams(N, train_flag):
-    file_name_pattern = 'data/{}-gram-train'
-    if not train_flag:
-        file_name_pattern = 'data/{}-gram-test'
-    with open(file_name_pattern.format(N)) as f:
-        lines = lines_iter(f)
-        ngrams = map(lambda s: s.split(), lines)
+    return tuple(map(path_to_ngrams, paths))
 
-        for ngram in ngrams:
-            yield ngram
+def iter_XY(runconfig):
+    dataconfig = runconfig.dataconfig
 
-def embed_ngram(embedding, ngram):
-    return to_ndarray(chain.from_iterable(map(embedding.__getitem__, ngram)))
+    embedding = WordEmbedding(dataconfig.embeddingpath())
+    (ngrams, n1grams) = iter_ngrams(dataconfig)
 
-def prepare_skipgrams(embedding, word, skipgrams):
-    middle_index = lambda l: (len(l) - 1) // 2
-    middle_is_word = lambda l: l[middle_index(l)] == word
-    remove_middle = lambda l: l[ : middle_index(l)] + l[middle_index(l) + 1 : ]
-    embed = lambda l: embed_ngram(embedding, l)
+    data = random_round_robin(zip(ngrams, repeat(True)), zip(n1grams, repeat(False)))
+
+    def prepare_gram(gram, isngram):
+        if isngram:
+            return (embedding[gram], 0)
+
+        l = len(gram)
+        assert l % 2 == 1
+
+        middle = l // 2
+
+        if gram[middle] not in runconfig.punctuation:
+            return None
+
+        label = runconfig.punctuation.index(gram[middle]) + 1
+
+        skipgram = copy(gram)
+        del skipgram[middle]
+
+        return (embedding[skipgram], label)
     
-    skipgrams = filter(middle_is_word, skipgrams)
-    skipgrams = map(remove_middle, skipgrams)
-    skipgrams = map(embed, skipgrams)
+    XY = starmap(prepare_gram, data)
+    XY = filter(None, XY)
 
-    return skipgrams
+    return XY
 
-def prepare_ngrams(embedding, ngrams):
-    embed = lambda l: embed_ngram(embedding, l)
-    return map(embed, ngrams)
+def run_analysis(runconfig):
+    dataconfig = runconfig.dataconfig
 
-def prepare_training_data(embedding, word, ngrams, skipgrams):
-    ngrams = prepare_ngrams(embedding, ngrams)
-    skipgrams = prepare_skipgrams(embedding, word, skipgrams)
+    XY = iter_XY(runconfig)
 
-    return (ngrams, skipgrams)
+    train_XY = islice(XY, runconfig.train_size)
+    classifier = runconfig.classify_trainer()(train_XY)
 
-def prepare_test_data(embedding, word, ngrams, skipgrams):
-    prep_ngrams = partial(prepare_ngrams, embedding)
-    prep_skipgrams = partial(prepare_skipgrams, embedding, word)
-    
-    ngrams = duplicate_gen(ngrams)
-    skipgrams = duplicate_gen(skipgrams)
+    test_XY = islice(XY, 2000)
+    test_X, test_Y = splitsave_XY(test_XY)
 
-    ngrams = genarr_first(prep_ngrams)(ngrams)
-    skipgrams = genarr_first(prep_skipgrams)(skipgrams)
-
-    return (ngrams, skipgrams)
-
-class ClassifierAnalysis:
-    def __init__(self, classifier, yes_test, no_test, yes_prior):
-        self.yess = [(sample, classifier(vec)) for (vec, sample) in yes_test]
-        self.nos = [(sample, classifier(vec)) for (vec, sample) in no_test]
-
-        self.total_size = len(self.yess) + len(self.nos)
-        self.yes_prior = yes_prior
-        self.prior_correctness = max(self.yes_prior, 1 - self.yes_prior)
-
-        self.yess_correct = [sample for (sample, result) in self.yess if result]
-        self.yess_incorrect = [sample for (sample, result) in self.yess if not result]
-        self.nos_correct = [sample for (sample, result) in self.nos if not result]
-        self.nos_incorrect = [sample for (sample, result) in self.nos if not result]
-
-        self.yes_correctness = len(self.yess_correct) / len(self.yess)
-        self.no_correctness = len(self.nos_correct) / len(self.nos)
-
-        self.algorithm_correctness = yes_prior * self.yes_correctness + (1 - yes_prior) * self.no_correctness
-
-        self.error_rate_quotient = (1 - self.algorithm_correctness) / (1 - self.prior_correctness)
-
-    def __str__(self):
-        out = StringIO()
-        p = partial(print, file=out)
-
-        p('Prior correctness rate: {}'.format(self.prior_correctness))
-        p('Algorithm correctness rate: {}'.format(self.algorithm_correctness))
-        p('Error rate quotient algorithm/prior: {}'.format(self.error_rate_quotient))
-
-        return out.getvalue()
-
-def read_training_data(embedding, word, N, sample_number):
-    ngrams = islice(iter_ngrams(N, train_flag=True), sample_number)
-    n1grams = islice(iter_ngrams(N + 1, train_flag=True), sample_number)
-
-    return prepare_training_data(embedding, word, ngrams, n1grams)
-
-def read_test_data(embedding, word, N, sample_number):
-    ngrams = islice(iter_ngrams(N, train_flag=True), sample_number)
-    n1grams = islice(iter_ngrams(N + 1, train_flag=True), sample_number * 100)
-
-    (ngrams, skipgrams) = prepare_test_data(embedding, word, ngrams, n1grams)
-
-    ngrams = list(ngrams)
-    skipgrams = list(skipgrams)
-    yes_prior = len(skipgrams) / (sample_number + sample_number * 100)
-
-    return (ngrams, skipgrams, yes_prior)
-
-def analyze_nn(embedding):
-    (ngrams, skipgrams) = read_training_data(embedding, ',', 4, 5000)
-
-    classifier = train_nn_classifier(skipgrams, ngrams)
-
-    (ngrams, skipgrams, yes_prior) = read_test_data(embedding, ',', 4, 1000)
-
-    return ClassifierAnalysis(classifier, skipgrams, ngrams, yes_prior)
-
-def analyze_qda(embedding):
-    (ngrams, skipgrams) = read_training_data(embedding, ',', 4, 1000)
-
-    classifier = train_qda_classifier(skipgrams, ngrams)
-
-    (ngrams, skipgrams, yes_prior) = read_test_data(embedding, ',', 4, 1000)
-
-    return ClassifierAnalysis(classifier, skipgrams, ngrams, yes_prior)
-
-def analyze_lstsq_qda(embedding):
-    (ngrams, skipgrams) = read_training_data(embedding, ',', 4, 10000)
-
-    classifier = train_lstsq_qda_classifier(skipgrams, ngrams)
-
-    (ngrams, skipgrams, yes_prior) = read_test_data(embedding, ',', 4, 1000)
-
-    return ClassifierAnalysis(classifier, skipgrams, ngrams, yes_prior)
-
-def analyze_gaussian_kde(embedding):
-    (ngrams, skipgrams) = read_training_data(embedding, ',', 4, 1000)
-
-    classifier = train_nn_classifier(skipgrams, ngrams)
-
-    (ngrams, skipgrams, yes_prior) = read_test_data(embedding, ',', 4, 1000)
-
-    return ClassifierAnalysis(classifier, skipgrams, ngrams, yes_prior)
-
-def analyze_random_forest(embedding):
-    (ngrams, skipgrams) = read_training_data(embedding, ',', 4, 100000)
-
-    classifier = train_random_forest_classifier(skipgrams, ngrams)
-
-    (ngrams, skipgrams, yes_prior) = read_test_data(embedding, ',', 4, 1000)
-
-    return ClassifierAnalysis(classifier, skipgrams, ngrams, yes_prior)
-
-def analyze_lstsq_random_forest(embedding):
-    (ngrams, skipgrams) = read_training_data(embedding, ',', 4, 100000)
-
-    classifier = train_lstsq_random_forest_classifier(skipgrams, ngrams)
-
-    (ngrams, skipgrams, yes_prior) = read_test_data(embedding, ',', 4, 1000)
-
-    return ClassifierAnalysis(classifier, skipgrams, ngrams, yes_prior)
-
-def main():
-    embedding100 = WordEmbedding('data/word-embedding-100')
-    embedding10 = WordEmbedding('data/word-embedding-10')
-    print(analyze_nn(embedding100))
-    print(analyze_qda(embedding100))
-    print(analyze_qda(embedding10))
-    print(analyze_lstsq_qda(embedding100))
-    print(analyze_gaussian_kde(embedding100))
-    print(analyze_random_forest(embedding100))
-    print(analyze_lstsq_random_forest(embedding100))
-
-if __name__ == '__main__':
-    main()
+    response_Y = classifier(test_X)
+    for test_y, response_y in zip(test_Y, response_Y):
+        print(test_y, response_y)

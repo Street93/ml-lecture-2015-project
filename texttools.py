@@ -1,4 +1,4 @@
-from utils import compress, decompress, iterlen, lines_iter, subsequences
+from utils import compress, decompress, iterlen, lines_iter, subsequences, to_ndarray
 
 from numpy import array
 import os
@@ -8,7 +8,7 @@ from pathlib import PurePath
 import random
 import string
 from itertools import chain, repeat
-from numpy import random, fromiter
+from numpy import random, fromiter, zeros
 
 def create_vocabulary(infile, outfile, mincount=5):
     vocab = dict()
@@ -90,7 +90,7 @@ class WordEmbedding:
         dimension = int(dimension_str)
 
         self.word_indices = {}
-        self.values = np.zeros((word_num, dimension))
+        self.values = zeros((word_num, dimension))
 
         word_index = 0
         for line in f:
@@ -109,10 +109,10 @@ class WordEmbedding:
         assert len(self.word_indices) == word_num
 
     def __getitem__(self, param):
-        return self.values[self.word_indices[param]]
-
-def ngram_to_vec(ngram, embedding):
-    return list(chain.from_iterable(map(embedding.__getitem__, ngram)))
+        if type(param) is str:
+            return self.values[self.word_indices[param]]
+        else:
+            return to_ndarray(chain.from_iterable(map(self.__getitem__, param)))
 
 def random_corpus_ngrams(corpus_path, N, predicate=None):
     ngrams = []
